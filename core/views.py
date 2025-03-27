@@ -25,9 +25,11 @@ def plan_trip(request):
     response = {
         "route": route_data["geometry"],  # Polyline for map
         "distance": route_data["distance"],  # in miles
-        "stops": route_data["stops"],  # List of stop locations
+        "stops": route_data["stops"],
+        "current_location": [float(x) for x in current_loc.split(',')],  # [lat, lon]
+        "pickup_location": [float(x) for x in pickup_loc.split(',')],   # [lat, lon]
+        "dropoff_location": [float(x) for x in dropoff_loc.split(',')] # List of stop locations
         #"daily_logs": daily_logs
-
     }
     logger.info(response)
     return Response(response)
