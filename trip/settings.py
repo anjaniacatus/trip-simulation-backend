@@ -25,10 +25,11 @@ SECRET_KEY = "django-insecure-y7%1nsnx6$md4-&8@bjr3q$xch^z0u5g_q0!+ers&kbt1cbkhx
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.pythonanywhere.com']
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app"]
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React dev server
+    "http://localhost:3000",
+    "https://zen-frontend-nine.vercel.app",# React prod server
 ]
 # Application definition
 
