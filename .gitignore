@@ -1,4 +1,4 @@
-venv
+.trip_env
 # Django #
 *.log
 *.pot
