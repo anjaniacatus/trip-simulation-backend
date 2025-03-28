@@ -58,3 +58,4 @@ coverage.xml
 !.vscode/extensions.json
 .history
 
+.vercel
