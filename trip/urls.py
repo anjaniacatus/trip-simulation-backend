@@ -20,6 +20,6 @@ from django.views.generic import RedirectView
 from core.views import plan_trip
 
 urlpatterns = [
-    path('', RedirectView.as_view(url='/plan_trip/', permanent=True)),
-    path('plan_trip/', plan_trip, name='plan_trip'),
+    path('', RedirectView.as_view(url='api/plan_trip/', permanent=True)),
+    path('api/plan_trip/', plan_trip, name='plan_trip'),
 ]
