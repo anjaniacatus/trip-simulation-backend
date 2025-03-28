@@ -23,5 +23,3 @@ urlpatterns = [
     path('', RedirectView.as_view(url='/plan_trip/', permanent=True)),
     path('plan_trip/', plan_trip, name='plan_trip'),
 ]
-if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
