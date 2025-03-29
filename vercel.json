@@ -1,16 +1,5 @@
 {
   "version": 2,
-  
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "https://zen-frontend-nine.vercel.app" },
-        { "key": "Access-Control-Allow-Headers", "value": "X-Requested-With, Content-Type, Authorization" }
-      ]
-    }
-  ],
-
   "builds": [
     {
       "src": "trip/wsgi.py",
@@ -22,11 +11,19 @@
       "use": "@vercel/static"
     }
   ],
-
   "routes": [
     {
       "src": "/static/(.*)",
       "dest": "/static/$1"
+    },
+    {
+      "src": "/api/(.*)",
+      "headers": {
+        "Access-Control-Allow-Origin": "https://zen-frontend-nine.vercel.app",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Authorization"
+      },
+      "dest": "trip/wsgi.py"
     },
     {
       "src": "/(.*)",
