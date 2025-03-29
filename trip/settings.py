@@ -28,7 +28,7 @@ DEBUG = True
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app"]
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
+    "http://localhost:3000", # localhost server
     "https://zen-frontend-nine.vercel.app",# React prod server
 ]
 # Application definition
