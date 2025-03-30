@@ -27,10 +27,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".vercel.app"]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "https://zen-frontend-nine.vercel.app"
-]
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -129,3 +126,20 @@ STATIC_ROOT = BASE_DIR / 'static'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+CORS_ALLOWED_ORIGINS = [
+    "https://zen-frontend-iota.vercel.app",
+    "http://localhost:3000",
+]
+# Allow specific methods and headers
+CORS_ALLOW_METHODS = [
+    "GET",
+    "POST",
+    "OPTIONS",
+]
+
+CORS_ALLOW_HEADERS = [
+    "content-type",
+    "accept",
+    "authorization",
+]

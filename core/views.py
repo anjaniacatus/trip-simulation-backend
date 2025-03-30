@@ -22,7 +22,7 @@ def plan_trip(request):
 
     Returns a JSON response with route, distance, stops.
     """
-
+    logger.debug(f"Request method: {request.method}")
     try:
         data = request.data
         # Validate and parse input data
