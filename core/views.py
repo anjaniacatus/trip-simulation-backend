@@ -58,6 +58,7 @@ def plan_trip(request):
             "pickup_location": pickup,   # [lat, lon]
             "dropoff_location": dropoff,  # [lat, lon]
             "daily_logs": route_data["daily_logs"],
+            "activities": route_data["activities"],
         }
         return Response(response)
 

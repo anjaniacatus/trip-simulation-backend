@@ -9,7 +9,8 @@ logger = logging.getLogger(__name__)
 HOS_RULES = {
     "PICKUP_TIME": 1.0, "DROPOFF_TIME": 1.0, "CYCLE_LIMIT": 70.0, "RESET_DURATION": 34.0,
     "MAX_DRIVING_HOURS_PER_DAY": 11.0, "MAX_ON_DUTY_HOURS_PER_DAY": 14.0, "MANDATORY_OFF_DUTY": 10.0,
-    "REST_BREAK_DURATION": 0.5, "MILES_PER_FUELING": 1000.0, "FUELING_TIME": 0.5, "AVERAGE_SPEED": 60.0
+    "REST_BREAK_DURATION": 0.5, "MILES_PER_FUELING": 1000.0, "FUELING_TIME": 0.5, "AVERAGE_SPEED": 60.0,
+    "SLEEPER_BERTH_MIN": 7.0  # Minimum hours for sleeper berth eligibility
 }
 
 def get_route(current: List[float], pickup: List[float], dropoff: List[float]) -> Optional[Dict]:
@@ -50,11 +51,13 @@ class TripState:
         self.iteration_count = 0
         self.max_iterations = 10000
         self.distance_tolerance = 0.1
-        logger.debug(f"Initialized: Distance={total_distance}, Speed={self.average_speed}, Cycle Hours={self.cycle_hours}")
 
     def add_activity(self, duration: float, activity_type: str, stop_reason: str = None, location: List[float] = None):
         try:
             end_time = self.current_time + timedelta(hours=duration)
+            # Classify long off-duty as sleeper berth
+            if activity_type == "OFF_DUTY" and duration >= HOS_RULES["SLEEPER_BERTH_MIN"]:
+                activity_type = "SLEEPER_BERTH"
             self.activities.append({
                 "start_time": self.current_time.isoformat(),
                 "end_time": end_time.isoformat(),
@@ -68,14 +71,13 @@ class TripState:
                 })
             self.current_time = end_time
             self.total_duration += duration
-            # Only count on-duty time towards cycle_hours
             if activity_type in ["DRIVING", "ON_DUTY_NOT_DRIVING"]:
                 self.cycle_hours += duration
                 self.daily_on_duty_hours += duration
             if activity_type == "DRIVING":
                 self.daily_driving_hours += duration
                 self.driving_since_break += duration
-            logger.debug(f"Activity: {activity_type}, Duration: {duration}, Cycle Hours: {self.cycle_hours}, Distance Traveled: {self.distance_traveled}, Remaining: {self.remaining_distance}")
+            logger.debug(f"Activity: {activity_type}, Duration: {duration}, Cycle Hours: {self.cycle_hours}, Distance Traveled: {self.distance_traveled}")
         except OverflowError as e:
             logger.error(f"Date overflow in add_activity: {e}")
             raise ValueError("Simulation exceeded date range")
@@ -184,52 +186,44 @@ def simulate_trip(route_data: Dict, current_cycle_used: float = 0) -> Dict:
         logger.error(f"Simulation error: {e}")
         raise ValueError(f"Failed to simulate trip: {str(e)}")
 
+
 def generate_daily_logs(activities: List[Dict], start_time: datetime) -> List[Dict]:
-    """
-    Generate daily logs from activities, grouping by day.
-    Returns a list of daily summaries with hours spent in each status.
-    """
     daily_logs = {}
     for activity in activities:
         start = datetime.fromisoformat(activity["start_time"])
         end = datetime.fromisoformat(activity["end_time"])
         activity_type = activity["activity_type"]
-        duration = (end - start).total_seconds() / 3600  # Hours
+        duration = (end - start).total_seconds() / 3600
 
-        # Determine the day (midnight to midnight)
         day_start = start.replace(hour=0, minute=0, second=0, microsecond=0)
         if start.date() != end.date():
-            # Split activity across days
             first_day_end = day_start + timedelta(days=1)
             first_duration = (first_day_end - start).total_seconds() / 3600
             second_duration = duration - first_duration
 
-            # First day
             day_key = day_start.strftime("%Y-%m-%d")
             if day_key not in daily_logs:
-                daily_logs[day_key] = {"DRIVING": 0.0, "ON_DUTY_NOT_DRIVING": 0.0, "OFF_DUTY": 0.0}
+                daily_logs[day_key] = {"DRIVING": 0.0, "ON_DUTY_NOT_DRIVING": 0.0, "OFF_DUTY": 0.0, "SLEEPER_BERTH": 0.0}
             daily_logs[day_key][activity_type] += first_duration
 
-            # Second day
             next_day_key = (day_start + timedelta(days=1)).strftime("%Y-%m-%d")
             if next_day_key not in daily_logs:
-                daily_logs[next_day_key] = {"DRIVING": 0.0, "ON_DUTY_NOT_DRIVING": 0.0, "OFF_DUTY": 0.0}
+                daily_logs[next_day_key] = {"DRIVING": 0.0, "ON_DUTY_NOT_DRIVING": 0.0, "OFF_DUTY": 0.0, "SLEEPER_BERTH": 0.0}
             daily_logs[next_day_key][activity_type] += second_duration
         else:
-            # Single day
             day_key = day_start.strftime("%Y-%m-%d")
             if day_key not in daily_logs:
-                daily_logs[day_key] = {"DRIVING": 0.0, "ON_DUTY_NOT_DRIVING": 0.0, "OFF_DUTY": 0.0}
+                daily_logs[day_key] = {"DRIVING": 0.0, "ON_DUTY_NOT_DRIVING": 0.0, "OFF_DUTY": 0.0, "SLEEPER_BERTH": 0.0}
             daily_logs[day_key][activity_type] += duration
 
-    # Convert to list of dicts for JSON response
     return [
         {
             "date": day,
             "driving_hours": logs["DRIVING"],
             "on_duty_not_driving_hours": logs["ON_DUTY_NOT_DRIVING"],
             "off_duty_hours": logs["OFF_DUTY"],
-            "total_hours": logs["DRIVING"] + logs["ON_DUTY_NOT_DRIVING"] + logs["OFF_DUTY"]
+            "sleeper_berth_hours": logs["SLEEPER_BERTH"],
+            "total_hours": logs["DRIVING"] + logs["ON_DUTY_NOT_DRIVING"] + logs["OFF_DUTY"] + logs["SLEEPER_BERTH"]
         }
         for day, logs in daily_logs.items()
     ]
