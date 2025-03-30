@@ -169,11 +169,67 @@ def simulate_trip(route_data: Dict, current_cycle_used: float = 0) -> Dict:
         trip.handle_pickup()
         trip.simulate_driving(cumulative_distances, geometry)
         trip.handle_dropoff()
+
+        daily_logs = generate_daily_logs(trip.activities, trip.start_time)
+
         route_data["stops"] = trip.stops
         route_data["activities"] = trip.activities
         route_data["start_time"] = trip.start_time
         route_data["duration"] = trip.total_duration
+        route_data["daily_logs"] = daily_logs
+
         return route_data
+
     except Exception as e:
         logger.error(f"Simulation error: {e}")
         raise ValueError(f"Failed to simulate trip: {str(e)}")
+
+def generate_daily_logs(activities: List[Dict], start_time: datetime) -> List[Dict]:
+    """
+    Generate daily logs from activities, grouping by day.
+    Returns a list of daily summaries with hours spent in each status.
+    """
+    daily_logs = {}
+    for activity in activities:
+        start = datetime.fromisoformat(activity["start_time"])
+        end = datetime.fromisoformat(activity["end_time"])
+        activity_type = activity["activity_type"]
+        duration = (end - start).total_seconds() / 3600  # Hours
+
+        # Determine the day (midnight to midnight)
+        day_start = start.replace(hour=0, minute=0, second=0, microsecond=0)
+        if start.date() != end.date():
+            # Split activity across days
+            first_day_end = day_start + timedelta(days=1)
+            first_duration = (first_day_end - start).total_seconds() / 3600
+            second_duration = duration - first_duration
+
+            # First day
+            day_key = day_start.strftime("%Y-%m-%d")
+            if day_key not in daily_logs:
+                daily_logs[day_key] = {"DRIVING": 0.0, "ON_DUTY_NOT_DRIVING": 0.0, "OFF_DUTY": 0.0}
+            daily_logs[day_key][activity_type] += first_duration
+
+            # Second day
+            next_day_key = (day_start + timedelta(days=1)).strftime("%Y-%m-%d")
+            if next_day_key not in daily_logs:
+                daily_logs[next_day_key] = {"DRIVING": 0.0, "ON_DUTY_NOT_DRIVING": 0.0, "OFF_DUTY": 0.0}
+            daily_logs[next_day_key][activity_type] += second_duration
+        else:
+            # Single day
+            day_key = day_start.strftime("%Y-%m-%d")
+            if day_key not in daily_logs:
+                daily_logs[day_key] = {"DRIVING": 0.0, "ON_DUTY_NOT_DRIVING": 0.0, "OFF_DUTY": 0.0}
+            daily_logs[day_key][activity_type] += duration
+
+    # Convert to list of dicts for JSON response
+    return [
+        {
+            "date": day,
+            "driving_hours": logs["DRIVING"],
+            "on_duty_not_driving_hours": logs["ON_DUTY_NOT_DRIVING"],
+            "off_duty_hours": logs["OFF_DUTY"],
+            "total_hours": logs["DRIVING"] + logs["ON_DUTY_NOT_DRIVING"] + logs["OFF_DUTY"]
+        }
+        for day, logs in daily_logs.items()
+    ]
